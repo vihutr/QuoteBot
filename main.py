@@ -1,11 +1,13 @@
 import datetime
 import discord
 import logging
+import os
 import random
 import sqlite3
 
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-database = 'database.db'
+database_folder = 'database'
+database = os.path.join(database_folder, 'database.db')
 
 
 def retrieveToken():
