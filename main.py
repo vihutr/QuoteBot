@@ -76,6 +76,7 @@ class MyClient(discord.Client):
             await message.channel.send(
 """```
 Commands\n
+Use any command without any input to see more info
 +q: add a quote, automatically timestamped
 +m: add a quote and add a timestamp after
 +r: get a random quote from the database
