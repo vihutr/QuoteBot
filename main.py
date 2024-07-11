@@ -124,8 +124,8 @@ if you add a dumb quote I kill you instantly
                 self.date_time = datetime.datetime.now()
                 self.date_time = self.date_time.strftime(r" %H:%M %m/%d/%Y")
                 msg = msg.split('|')
-                self.quotee = msg[0]
-                self.quote = msg[1]
+                self.quotee = msg[0].strip()
+                self.quote = msg[1].strip()
                 self.msg_state = 1
                 await message.channel.send('Are you sure you want to add the quote? (y/n)')
                 await message.channel.send(f'```{self.format_quote()}```')
@@ -151,8 +151,8 @@ if you add a dumb quote I kill you instantly
                 self.msg_state = 2
                 self.sess_auth = message.author
                 msg = msg.split('|')
-                self.quotee = msg[0]
-                self.quote = msg[1]
+                self.quotee = msg[0].strip()
+                self.quote = msg[1].strip()
                 await message.channel.send('Add the date manually, preferably in the format "Hours:Minutes Month/Day/Year"')
         elif self.msg_state == 2 and self.sess_auth == message.author:
             self.date_time = message.content
