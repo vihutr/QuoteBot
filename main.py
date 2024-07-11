@@ -5,17 +5,43 @@ import os
 import random
 import sqlite3
 
+chance_limit = 500
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 database_folder = 'database'
 database = os.path.join(database_folder, 'database.db')
+qc_path = os.path.join(database_folder, 'qc.txt')
+print(qc_path)
+
+
+def check_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+
+def save_to_dir(path, data):
+    with open(path, "w", encoding="utf-8") as file:
+        file.write(data)
 
 
 def retrieveToken():
+    check_dir("secret")
     with open("secret/token", "r") as file:
         token = file.read()
         token = token.splitlines()[0]
         file.close()
         return token
+
+
+check_dir(database_folder)
+qc = 0
+with open(qc_path, "r") as f:
+    print("reading qc")
+    data = int(f.read().splitlines()[0])
+    if not data:
+        print("no data")
+    else:
+        qc = data
+        print('qc: ' + str(qc))
 
 
 class MyClient(discord.Client):
@@ -26,7 +52,7 @@ class MyClient(discord.Client):
                          (quote TEXT, quotee TEXT, datetime TEXT)''')
         self.conn.commit()
         print(f"Connected to {database}")
-        self.quote_chance = 0
+        self.quote_chance = qc
         self.quote = ''
         self.quotee = ''
         self.date_time = ''
@@ -72,7 +98,9 @@ class MyClient(discord.Client):
 
     async def on_message(self, message):
         print(f'Message from {message.author}: {message.content}')
+        print(f'Current state: {self.msg_state}')
         if message.content == '+help' or message.content == '+h' and self.msg_state == 0:
+            print("sending help block")
             await message.channel.send(
 """```
 Commands\n
@@ -87,6 +115,7 @@ if you add a dumb quote I kill you instantly
 ```"""
                     )
         elif message.content.startswith('+q') and self.msg_state == 0:
+            print("start quote process")
             msg = message.content.strip('+q ')
             if not msg or msg == 'help':
                 await message.channel.send('use \'+q\' followed by a space, the quotee|quote i.e:\n```+q Joey|I can\'t hear you over doing that thing you just said```')
@@ -114,6 +143,7 @@ if you add a dumb quote I kill you instantly
         elif message.author.bot:
             print("bot msg")
         elif message.content.startswith('+m') and self.msg_state == 0:
+            print("start manual process")
             msg = message.content.strip('+m ')
             if not msg:
                 await message.channel.send('use \'+m\' followed by a space and the quotee|quote i.e:\n```+m Joey|I can\'t hear you over doing that thing you just said```\n then add the date for your next input')
@@ -139,6 +169,7 @@ if you add a dumb quote I kill you instantly
                 await message.channel.send('quote reset')
                 self.msg_state = 0
         elif message.content.startswith('+a') and self.msg_state == 0:
+            print("get all quotes")
             self.get_all_quotes()
             everything = '```'
             for q in self.all_quotes:
@@ -151,17 +182,26 @@ if you add a dumb quote I kill you instantly
             everything += '```'
             await message.channel.send(everything)
         else:
+            print("checking random")
+            print(chance_limit - self.quote_chance)
+            calc = random.randint(0, (chance_limit - self.quote_chance))
+            print('calc: ' + str(calc))
             if message.content.startswith('+r') and self.msg_state == 0:
                 print("getting a random quote")
                 self.random_quote()
                 await message.channel.send(self.format_quote())
-            elif random.randint(0, 1000-self.quote_chance) < 1:
+            elif calc < 1:
+                print("random chance success, getting a randmo quote")
                 self.random_quote()
                 self.quote_chance = 0
                 await message.channel.send(self.format_quote())
             else:
+                print("random chance failed, iterating chance")
                 self.quote_chance += 1
                 print(f'qc: {self.quote_chance}')
+                with open(qc_path, "w") as f:
+                    succ = f.write(str(self.quote_chance))
+                    print(succ)
 
 
 token = retrieveToken()
