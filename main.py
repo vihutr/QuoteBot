@@ -6,10 +6,6 @@ import random
 import sqlite3
 
 chance_limit = 500
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-database_folder = 'database'
-database = os.path.join(database_folder, 'database.db')
-qc_path = os.path.join(database_folder, 'qc.txt')
 help_msg = """```
 Commands\n
 Use any command without any input to see more info
@@ -22,6 +18,11 @@ Use any command without any input to see more info
 if you add a dumb quote I kill you instantly
 ```"""
 
+handler = logging.FileHandler(filename='discord.log',
+                              encoding='utf-8', mode='w')
+database_folder = 'database'
+database = os.path.join(database_folder, 'database.db')
+qc_path = os.path.join(database_folder, 'qc.txt')
 print(qc_path)
 
 
@@ -68,8 +69,8 @@ class MyClient(discord.Client):
         self.quote = ''
         self.quotee = ''
         self.date_time = ''
-        self.msg_state = 0
-        self.sess_auth = ''
+        self.session_state = 0
+        self.session_user = ''
         self.all_quotes = self.get_all_quotes()
 
     def add_quote(self):
@@ -105,103 +106,104 @@ class MyClient(discord.Client):
     async def send_quote(self, channel):
         await channel.send(self.format_quote())
 
+    async def all(self, message):
+        # fix for discord message limit
+        print("get all quotes")
+        self.get_all_quotes()
+        everything = '```'
+        for q in self.all_quotes:
+            self.quote = q[0]
+            self.quotee = q[1]
+            self.date_time = q[2]
+            current = f'{self.format_quote()}\n'
+            print(current)
+            everything += current
+        everything += '```'
+        await message.channel.send(everything)
+
+    async def quote_process(self, message):
+        print("stripping message")
+        msg = message.content.strip('+q ')
+        if not msg or msg == 'help':
+            await message.channel.send('use \'+q\' followed by a space, the quotee|quote i.e:\n```+q Joey|I can\'t hear you over doing that thing you just said```')
+        else:
+            print("start quote process")
+            self.session_user = message.author
+            self.date_time = datetime.datetime.now()
+            self.date_time = self.date_time.strftime(r"%H:%M %m/%d/%Y")
+            msg = msg.split('|')
+            self.quotee = msg[0].strip()
+            self.quote = msg[1].strip()
+            self.session_state = 1
+            await message.channel.send('are you sure you want to add the quote? (y/n)')
+            await message.channel.send(f'```{self.format_quote()}```')
+
+    async def manual_process(self, message):
+        msg = message.content.strip('+m ')
+        if not msg or msg == 'help':
+            await message.channel.send('use \'+m\' followed by a space and the quotee|quote|date i.e:\n```+m Joey|I can\'t hear you over doing that thing you just said|2:00 04/20/69```')
+        else:
+            print("start manual process")
+            self.session_user = message.author
+            msg = msg.split('|')
+            self.quotee = msg[0].strip()
+            self.quote = msg[1].strip()
+            self.date_time = msg[2].strip()
+            self.session_state = 1
+            await message.channel.send(f'```{self.format_quote()}```')
+            await message.channel.send('are you sure you want to add the quote? (y/n)')
+
+    async def lets_go_gambling(self, message):
+        print("checking random")
+        print(chance_limit - self.quote_chance)
+        calc = random.randint(0, (chance_limit - self.quote_chance))
+        if calc < random.randint(1, 5):
+            print("success, getting a random quote")
+            self.random_quote()
+            self.quote_chance = 0
+            await message.channel.send(self.format_quote())
+        else:
+            print("failure, iterating chance")
+            self.quote_chance += random.randint(1, 5)
+            print(f'qc: {self.quote_chance}')
+            if self.quote_chance % 10 == 0:
+                with open(qc_path, "w") as f:
+                    f.write(str(self.quote_chance))
+
     async def on_ready(self):
-        print(f'Logged on as {self.user}!')
+        print(f'Logged on as {self.user}')
 
     async def on_message(self, message):
         print(f'Message from {message.author}: {message.content}')
-        print(f'Current state: {self.msg_state}')
-        if message.content == '+help' or message.content == '+h' and self.msg_state == 0:
-            print("sending help block")
-            await message.channel.send(help_msg)
-        elif message.content.startswith('+q') and self.msg_state == 0:
-            print("start quote process")
-            msg = message.content.strip('+q ')
-            if not msg or msg == 'help':
-                await message.channel.send('use \'+q\' followed by a space, the quotee|quote i.e:\n```+q Joey|I can\'t hear you over doing that thing you just said```')
-            else:
-                self.sess_auth = message.author
-                self.date_time = datetime.datetime.now()
-                self.date_time = self.date_time.strftime(r" %H:%M %m/%d/%Y")
-                msg = msg.split('|')
-                self.quotee = msg[0].strip()
-                self.quote = msg[1].strip()
-                self.msg_state = 1
-                await message.channel.send('Are you sure you want to add the quote? (y/n)')
-                await message.channel.send(f'```{self.format_quote()}```')
-        elif self.msg_state == 1 and self.sess_auth == message.author:
-            if message.content == 'y':
-                self.add_quote()
-                await message.channel.send('quote added successfully')
-                self.msg_state = 0
-                self.sess_auth == ''
-            elif message.content == 'n':
-                await message.channel.send('quote reset')
-                self.msg_state = 0
-                self.sess_auth == ''
-
-        elif message.author.bot:
+        print(f'Current state: {self.session_state}')
+        if message.author.bot:
             print("bot msg")
-        elif message.content.startswith('+m') and self.msg_state == 0:
-            print("start manual process")
-            msg = message.content.strip('+m ')
-            if not msg:
-                await message.channel.send('use \'+m\' followed by a space and the quotee|quote i.e:\n```+m Joey|I can\'t hear you over doing that thing you just said```\n then add the date for your next input')
-            else:
-                self.msg_state = 2
-                self.sess_auth = message.author
-                msg = msg.split('|')
-                self.quotee = msg[0].strip()
-                self.quote = msg[1].strip()
-                await message.channel.send('Add the date manually, preferably in the format "Hours:Minutes Month/Day/Year"')
-        elif self.msg_state == 2 and self.sess_auth == message.author:
-            self.date_time = message.content
-            self.msg_state = 3
-            await message.channel.send('Are you sure you want to add the quote? (y/n)')
-            await message.channel.send(f'```{self.format_quote()}```')
-        elif self.msg_state == 3 and self.sess_auth == message.author:
-            if message.content == 'y':
-                self.add_quote()
-                await message.channel.send('quote added successfully')
-                self.msg_state = 0
-                self.sess_auth == ''
-            elif message.content == 'n':
-                await message.channel.send('quote reset')
-                self.msg_state = 0
-        elif message.content.startswith('+a') and self.msg_state == 0:
-            print("get all quotes")
-            self.get_all_quotes()
-            everything = '```'
-            for q in self.all_quotes:
-                self.quote = q[0]
-                self.quotee = q[1]
-                self.date_time = q[2]
-                current = f'{self.format_quote()}\n'
-                print(current)
-                everything += current
-            everything += '```'
-            await message.channel.send(everything)
-        else:
-            print("checking random")
-            print(chance_limit - self.quote_chance)
-            calc = random.randint(0, (chance_limit - self.quote_chance))
-            print('calc: ' + str(calc))
-            if message.content.startswith('+r') and self.msg_state == 0:
+        elif self.session_state == 0:
+            if message.content.startswith('+a'):
+                await self.all(message)
+            elif message.content.startswith('+r'):
                 print("getting a random quote")
                 self.random_quote()
                 await message.channel.send(self.format_quote())
-            elif calc < 1:
-                print("random chance success, getting a randmo quote")
-                self.random_quote()
-                self.quote_chance = 0
-                await message.channel.send(self.format_quote())
+            elif message.content == '+help' or message.content == '+h':
+                print("sending help block")
+                await message.channel.send(help_msg)
+            elif message.content.startswith('+q'):
+                await self.quote_process(message)
+            elif message.content.startswith('+m'):
+                await self.manual_process(message)
             else:
-                print("random chance failed, iterating chance")
-                self.quote_chance += 1
-                print(f'qc: {self.quote_chance}')
-                with open(qc_path, "w") as f:
-                    succ = f.write(str(self.quote_chance))
-                    print(succ)
+                await self.lets_go_gambling(message)
+        elif self.session_state == 1 and self.session_user == message.author:
+            if message.content == 'y':
+                self.add_quote()
+                await message.channel.send('quote added successfully')
+                self.session_state = 0
+                self.session_user == ''
+            elif message.content == 'n':
+                await message.channel.send('quote reset')
+                self.session_state = 0
+                self.session_user == ''
 
 
 token = retrieveToken()
