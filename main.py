@@ -17,13 +17,10 @@ Use any command without any input to see more info
 
 if you add a dumb quote I kill you instantly
 ```"""
-
-handler = logging.FileHandler(filename='discord.log',
-                              encoding='utf-8', mode='w')
+token_folder = 'token'
 database_folder = 'database'
 database = os.path.join(database_folder, 'database.db')
 qc_path = os.path.join(database_folder, 'qc.txt')
-print(qc_path)
 
 
 def check_dir(path):
@@ -206,6 +203,8 @@ class MyClient(discord.Client):
                 self.session_user == ''
 
 
+handler = logging.FileHandler(filename='discord.log',
+                              encoding='utf-8', mode='w')
 token = retrieveToken()
 intents = discord.Intents(messages=True)
 intents.message_content = True
