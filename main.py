@@ -17,7 +17,6 @@ Use any command without any input to see more info
 
 if you add a dumb quote I kill you instantly
 ```"""
-token_folder = 'token'
 database_folder = 'database'
 database = os.path.join(database_folder, 'database.db')
 qc_path = os.path.join(database_folder, 'qc.txt')
