@@ -10,6 +10,18 @@ handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w'
 database_folder = 'database'
 database = os.path.join(database_folder, 'database.db')
 qc_path = os.path.join(database_folder, 'qc.txt')
+help_msg = """```
+Commands\n
+Use any command without any input to see more info
++q: add a quote, automatically timestamped
++m: add a quote, manually timestamped
++r: get a random quote from the database
++a: get all quotes (doesn't actually work lmao)
++help or +h: this thing
+
+if you add a dumb quote I kill you instantly
+```"""
+
 print(qc_path)
 
 
@@ -101,19 +113,7 @@ class MyClient(discord.Client):
         print(f'Current state: {self.msg_state}')
         if message.content == '+help' or message.content == '+h' and self.msg_state == 0:
             print("sending help block")
-            await message.channel.send(
-"""```
-Commands\n
-Use any command without any input to see more info
-+q: add a quote, automatically timestamped
-+m: add a quote and add a timestamp after
-+r: get a random quote from the database
-+a: get all quotes (doesn't actually work lmao)
-+help or +h: this thing
-
-if you add a dumb quote I kill you instantly
-```"""
-                    )
+            await message.channel.send(help_msg)
         elif message.content.startswith('+q') and self.msg_state == 0:
             print("start quote process")
             msg = message.content.strip('+q ')
